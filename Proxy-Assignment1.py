@@ -100,7 +100,7 @@ while True:
 
   print ('Requested Resource:\t' + resource)
 
-  # Check if resource is in cache
+  # Check if resource is in cache.
   try:
     cacheLocation = './' + hostname + resource
     if cacheLocation.endswith('/'):
