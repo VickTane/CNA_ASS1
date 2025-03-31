@@ -136,16 +136,44 @@ while True:
                 CacheContent, 
                 re.IGNORECASE
             )
-            MaximumAgeCaching = int(cacheControlMatching.group(1)) if cacheControlMatching else 0
-            # Calculate how long the cache file has existed
+
+
+            expiresMatching = re.search(
+                r'Expires:\s*(.+)', 
+                CacheContent,
+                re.IGNORECASE
+            )
+
+            if cacheControlMatching:
+                MaximumAgeCaching = int(cacheControlMatching.group(1))
+                print(f"[CACHE] Found Cache-Control: max-age={MaximumAgeCaching}s")
+            elif expiresMatching:
+                expires_str = expiresMatching.group(1).strip()
+                try:
+                    expires_time = time.mktime(time.strptime(expires_str, '%a, %d %b %Y %H:%M:%S %Z'))
+                    MaximumAgeCaching = expires_time - time.time()
+                    print(f"[CACHE] Using Expires header, TTL: {int(MaximumAgeCaching)}s")
+                except:
+                    MaximumAgeCaching = 0
+                    print("[CACHE] Invalid Expires format, default to no caching")
+            else:
+                MaximumAgeCaching = 3600  # Default cache time for testing
+                print("[CACHE] No cache headers, using default 1h for testing")
+
+# 4. Calculate cache age
             lastModifiedTime = os.path.getmtime(cacheLocation)
             cacheAgeSeconds = time.time() - lastModifiedTime
-            
-            print(f"Cache file age: {int(cacheAgeSeconds)} seconds, Max age: {MaximumAgeCaching} seconds")
-            # Verify that it is not expired
-            if MaximumAgeCaching > 0 and cacheAgeSeconds > MaximumAgeCaching:
-                cacheFile.close()
-                raise Exception("Cache expired")
+
+            print(f"[CACHE] Age: {int(cacheAgeSeconds)}s / Max: {int(MaximumAgeCaching)}s")
+
+# 5. Validate only if we have caching instructions
+            if MaximumAgeCaching > 0:  # Only validate if caching is allowed
+                if cacheAgeSeconds > MaximumAgeCaching:
+                    print(f"[CACHE] Expired (Age {int(cacheAgeSeconds)}s > Max {int(MaximumAgeCaching)}s)")
+                    cacheFile.close()
+                    raise Exception("Cache expired")
+                else:
+                    print("[CACHE] No caching policy, serving anyway")
         # ~~~~ END CODE INSERT ~~~~
 
 
