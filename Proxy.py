@@ -21,7 +21,7 @@ proxyPort = int(args.port)
 try:
     # Create a server socket
     # ~~~~ INSERT CODE ~~~~
-    SocketConnectingServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM) ##create a TCP socket and listen client connection request
+    serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # ~~~~ END CODE INSERT ~~~~
     print('Created socket')
 except:
@@ -31,7 +31,7 @@ except:
 try:
     # Bind the the server socket to a host and port
     # ~~~~ INSERT CODE ~~~~
-    SocketConnectingServer.bind((proxyHost, proxyPort))  ##bind the socket to dedicated Ip and port, so it can accept connection
+    serverSocket.bind((proxyHost, proxyPort))
     # ~~~~ END CODE INSERT ~~~~
     print('Port is bound')
 except:
@@ -41,7 +41,7 @@ except:
 try:
     # Listen on the server socket
     # ~~~~ INSERT CODE ~~~~
-    SocketConnectingServer.listen(8) ##listen and bind the interface and socket together
+    serverSocket.listen(8)
     # ~~~~ END CODE INSERT ~~~~
     print('Listening to socket')
 except:
@@ -56,7 +56,7 @@ while True:
     # Accept connection from client and store in the clientSocket
     try:
         # ~~~~ INSERT CODE ~~~~
-        clientSocket, client_address = SocketConnectingServer.accept() #accept client connection and save socket and client address.
+        clientSocket, clientAddress = serverSocket.accept()
         # ~~~~ END CODE INSERT ~~~~
         print('Received a connection')
     except:
@@ -113,79 +113,123 @@ while True:
 
         print('Cache location:\t\t' + cacheLocation)
 
+        # ~~~~ INSERT CODE ~~~~
+        # Cache validation logic (added without modifying structure)
         fileExists = os.path.isfile(cacheLocation)
-        
-        # Check whether the file is currently in the cache
-        cacheFile = open(cacheLocation, "r")
-        cacheData = cacheFile.readlines()
+        if fileExists:
+            cacheFile = open(cacheLocation, "r")
+            cacheData = cacheFile.readlines()
+            cache_content = ''.join(cacheData)
 
-        # Check cache expiration
-        cache_content = ''.join(cacheData)
-        cache_control_match = re.search(
-            r'Cache-Control:\s*max-age=(\d+)', 
-            cache_content, 
-            re.IGNORECASE
-        )
-        
-        # Get cache max-age setting
-        cache_max_age = int(cache_control_match.group(1)) if cache_control_match else 0
-        last_modified_time = os.path.getmtime(cacheLocation)
-        cache_age_seconds = time.time() - last_modified_time
-        
-        print(f"Cache file age: {int(cache_age_seconds)} seconds, Max age: {cache_max_age} seconds")
-        
-        # Validate if cache is expired
-        if cache_max_age > 0 and cache_age_seconds > cache_max_age:
-            print("Warning: Cache expired, fetching fresh copy")
-            raise Exception("Cache expired")
+
+            
+            
+            # Check cache expiration
+            cache_control_match = re.search(
+                r'Cache-Control:\s*max-age=(\d+)', 
+                cache_content, 
+                re.IGNORECASE
+            )
+            cache_max_age = int(cache_control_match.group(1)) if cache_control_match else 0
+            last_modified_time = os.path.getmtime(cacheLocation)
+            cache_age_seconds = time.time() - last_modified_time
+            
+            print(f"Cache file age: {int(cache_age_seconds)} seconds, Max age: {cache_max_age} seconds")
+            
+            if cache_max_age > 0 and cache_age_seconds > cache_max_age:
+                cacheFile.close()
+                raise Exception("Cache expired")
+        # ~~~~ END CODE INSERT ~~~~
 
         print('Cache hit! Loading from cache file: ' + cacheLocation)
         # ProxyServer finds a cache hit
         # Send back response to client 
         # ~~~~ INSERT CODE ~~~~
         for line in cacheData:
-            clientSocket.send(line.encode()) 
+            clientSocket.send(line.encode())
         # ~~~~ END CODE INSERT ~~~~
-        
+        cacheFile.close()
         print('Sent to the client:')
-        for line in cacheData: 
-            print('> ' + line.strip())
-
-    except Exception as e:
-        print(f"Cache miss: {str(e)}")
+        print('> ' + ''.join(cacheData).replace('\r\n', ' ').strip())
+    except:
+        # cache miss.  Get resource from origin server
+        originServerSocket = None
+        # Create a socket to connect to origin server
+        # and store in originServerSocket
+        # ~~~~ INSERT CODE ~~~~
         originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
+        # ~~~~ END CODE INSERT ~~~~
+
         print('Connecting to:\t\t' + hostname + '\n')
-        try: # Get the IP address for a hostname
+        try:
+            # Get the IP address for a hostname
             address = socket.gethostbyname(hostname)
+            # Connect to the origin server
+            # ~~~~ INSERT CODE ~~~~
             originServerSocket.connect((address, 80))
+            # ~~~~ END CODE INSERT ~~~~
             print('Connected to origin Server')
 
-
-            originalServerRequest = f"{method} {resource} {version}"
+            originServerRequest = ''
+            originServerRequestHeader = ''
+            # Create origin server request line and headers to send
+            # and store in originServerRequestHeader and originServerRequest
+            # originServerRequest is the first line in the request and
+            # originServerRequestHeader is the second line in the request
+            # ~~~~ INSERT CODE ~~~~
+            originServerRequest = f"{method} {resource} {version}"
             originServerRequestHeader = f"Host: {hostname}"
-            request = originalServerRequest + '\r\n' + originServerRequestHeader + '\r\n\r\n'
-            
+            # ~~~~ END CODE INSERT ~~~~
+
+            # Construct the request to send to the origin server
+            request = originServerRequest + '\r\n' + originServerRequestHeader + '\r\n\r\n'
+
+            # Request the web resource from origin server
             print('Forwarding request to origin server:')
             for line in request.split('\r\n'):
                 print('> ' + line)
-            
-            originServerSocket.sendall(request.encode())
-            originServerResponsing = originServerSocket.recv(BUFFER_SIZE)
-            clientSocket.sendall(originServerResponsing)
-            
-            with open(cacheLocation, 'wb') as cache_file:
-                cache_file.write(originServerResponsing)
-                print('cache file closed')
-            
+
+            try:
+                originServerSocket.sendall(request.encode())
+            except socket.error:
+                print('Forward request to origin failed')
+                sys.exit()
+
+            print('Request sent to origin server\n')
+
+            # Get the response from the origin server
+            # ~~~~ INSERT CODE ~~~~
+            originServerResponse = originServerSocket.recv(BUFFER_SIZE)
+            # ~~~~ END CODE INSERT ~~~~
+
+            # Send the response to the client
+            # ~~~~ INSERT CODE ~~~~
+            clientSocket.sendall(originServerResponse)
+            # ~~~~ END CODE INSERT ~~~~
+
+            # Create a new file in the cache for the requested file.
+            cacheDir, file = os.path.split(cacheLocation)
+            print('cached directory ' + cacheDir)
+            if not os.path.exists(cacheDir):
+                os.makedirs(cacheDir)
+            cacheFile = open(cacheLocation, 'wb')
+
+            # Save origin server response in the cache file
+            # ~~~~ INSERT CODE ~~~~
+            cacheFile.write(originServerResponse)
+            # ~~~~ END CODE INSERT ~~~~
+            cacheFile.close()
+            print('cache file closed')
+
+            # finished communicating with origin server - shutdown socket writes
+            print('origin response received. Closing sockets')
             originServerSocket.close()
+            
             clientSocket.shutdown(socket.SHUT_WR)
             print('client socket shutdown for writing')
-
-
         except OSError as err:
             print('origin server request failed. ' + err.strerror)
-    
+
     try:
         clientSocket.close()
     except:
