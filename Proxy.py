@@ -153,32 +153,36 @@ while True:
 
     except Exception as e:
         print(f"Cache miss: {str(e)}")
-        originSocketConnectingServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         print('Connecting to:\t\t' + hostname + '\n')
-        try:
+        try: # Get the IP address for a hostname
             address = socket.gethostbyname(hostname)
-            originSocketConnectingServer.connect((address, 80))
+            originServerSocket.connect((address, 80))
             print('Connected to origin Server')
+
+
             originalServerRequest = f"{method} {resource} {version}"
-            originalServerRequestHeader = f"Host: {hostname}"
-            request = originalServerRequest + '\r\n' + originalServerRequestHeader + '\r\n\r\n'
+            originServerRequestHeader = f"Host: {hostname}"
+            request = originalServerRequest + '\r\n' + originServerRequestHeader + '\r\n\r\n'
             
             print('Forwarding request to origin server:')
             for line in request.split('\r\n'):
                 print('> ' + line)
             
-            originSocketConnectingServer.sendall(request.encode())
-            originServerResponsing = originSocketConnectingServer.recv(BUFFER_SIZE)
+            originServerSocket.sendall(request.encode())
+            originServerResponsing = originServerSocket.recv(BUFFER_SIZE)
             clientSocket.sendall(originServerResponsing)
             
             with open(cacheLocation, 'wb') as cache_file:
                 cache_file.write(originServerResponsing)
                 print('cache file closed')
             
-            originSocketConnectingServer.close()
+            originServerSocket.close()
             clientSocket.shutdown(socket.SHUT_WR)
             print('client socket shutdown for writing')
+
+
         except OSError as err:
             print('origin server request failed. ' + err.strerror)
     
