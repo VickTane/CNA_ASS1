@@ -113,6 +113,17 @@ while True:
     # Check wether the file is currently in the cache
     cacheFile = open(cacheLocation, "r")
     cacheData = cacheFile.readlines()
+    cacheString = '', join(cacheData)
+
+    ##check if it's get expired
+    MatchingCacheContrl = re.search(r'CacheCtrl:.*?maxAge = (\d+)', cacheString, re.IGNORECASE)
+    MaxAge = int(MatchingCacheContrl.group(1)) if MatchingCacheContrl else None
+    timeModi = os.path.getmtime(locateCache) #cached file start working time
+    aging = time.time() - timeModi #equation = file caching aging = current time - (cache strart working time)
+    print(f"The age of caching file is {int(aging)} secs")
+    if aging >= MaxAge:
+      print("cache has been expired.")
+      raise Exception("Cache has been expired!")
 
     print ('Cache hit! Loading from cache file: ' + cacheLocation)
     # ProxyServer finds a cache hit
