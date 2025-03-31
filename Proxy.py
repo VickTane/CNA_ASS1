@@ -141,6 +141,9 @@ while True:
     # Create a socket to connect to origin server
     # and store in originServerSocket
     # ~~~~ INSERT CODE ~~~~
+
+
+    originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) ##pull resourse from cache, if don't have, require from original server
     # ~~~~ END CODE INSERT ~~~~
 
     print ('Connecting to:\t\t' + hostname + '\n')
