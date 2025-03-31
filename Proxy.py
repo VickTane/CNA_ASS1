@@ -107,31 +107,39 @@ while True:
 
     # Check if resource is in cache
     try:
-        cacheLocate = './' + hostname + resource
-        if cacheLocate.endswith('/'):
-            cacheLocate = cacheLocate + 'default'
+        cacheLocation = './' + hostname + resource
+        if cacheLocation.endswith('/'):
+            cacheLocation = cacheLocation + 'default'
 
-        print('Cache location:\t\t' + cacheLocate)
+        print('Cache location:\t\t' + cacheLocation)
 
-        file_exists = os.path.isfile(cacheLocate)
+        fileExists = os.path.isfile(cacheLocation)
         
         # Check whether the file is currently in the cache
-        with open(cacheLocate, "r") as cache_file:
-            cacheData = cache_file.readlines()
-            cache_string = ''.join(cacheData)
+        cacheData = cacheFile.readlines()
+        cacheFile = open(cacheLocation, "r")
 
-            ##check if it's expired
-            matchingCacheCtrol = re.search(r'CacheCtrl:.*?maxAge = (\d+)', cache_string, re.IGNORECASE)
-            maxAge = int(matchingCacheCtrol.group(1)) if matchingCacheCtrol else None
-            timeModi = os.path.getmtime(cacheLocate)
-            age = time.time() - timeModi
-            print(f"The age of caching file is {int(age)} secs")
+            # Check cache expiration
+            cache_content = cacheFile.read()
+            cache_control_match = re.search(
+                r'Cache-Control:\s*max-age=(\d+)', 
+                cache_content, 
+                re.IGNORECASE
+            )
             
-            if maxAge is not None and age >= maxAge:
-                print("cache has been expired.")
-                raise Exception("Cache has been expired!")
+            # Get cache max-age setting
+            cache_max_age = int(cache_control_match.group(1)) if cache_control_match else 0
+            last_modified_time = os.path.getmtime(cacheLocation)
+            cache_age_seconds = time.time() - last_modified_time
+            
+            print(f"Cache file age: {int(cache_age_seconds)} seconds, Max age: {cache_max_age} seconds")
+            
+            # Validate if cache is expired
+            if cache_max_age > 0 and cache_age_seconds > cache_max_age:
+                print("Warning: Cache expired, fetching fresh copy")
+                raise Exception("Cache expired")
 
-            print('Cache hit! Loading from cache file: ' + cacheLocate)
+            print('Cache hit! Loading from cache file: ' + cacheLocation)
             # ProxyServer finds a cache hit
             # Send back response to client 
             # ~~~~ INSERT CODE ~~~~
@@ -215,12 +223,12 @@ while True:
             #It should be cache down below
             if go_cache:
                 # Create a new file in the cache for the requested file.
-                cache_dir, file = os.path.split(cacheLocate)
+                cache_dir, file = os.path.split(cacheLocation)
                 print('cached directory ' + cache_dir)
                 if not os.path.exists(cache_dir):
                     os.makedirs(cache_dir)
                 
-                with open(cacheLocate, 'wb') as cache_file:
+                with open(cacheLocation, 'wb') as cache_file:
                     # Save origin server response in the cache file
                     # ~~~~ INSERT CODE ~~~~
                     cache_file.write(originServerResponsing)
