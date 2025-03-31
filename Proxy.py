@@ -125,25 +125,25 @@ while True:
             cacheData = cacheFile.readlines()
 
             ##Merge cached data in list form
-            cache_content = ''.join(cacheData)
+            CacheContent = ''.join(cacheData)
 
 
 
             
             # Check cache expiration and take max age from http header
-            cache_control_match = re.search(
+            cacheControlMatching = re.search(
                 r'Cache-Control:\s*max-age=(\d+)', 
-                cache_content, 
+                CacheContent, 
                 re.IGNORECASE
             )
-            cache_max_age = int(cache_control_match.group(1)) if cache_control_match else 0
+            MaximumAgeCaching = int(cacheControlMatching.group(1)) if cacheControlMatching else 0
             # Calculate how long the cache file has existed
-            last_modified_time = os.path.getmtime(cacheLocation)
-            cache_age_seconds = time.time() - last_modified_time
+            lastModifiedTime = os.path.getmtime(cacheLocation)
+            cacheAgeSeconds = time.time() - lastModifiedTime
             
-            print(f"Cache file age: {int(cache_age_seconds)} seconds, Max age: {cache_max_age} seconds")
+            print(f"Cache file age: {int(cacheAgeSeconds)} seconds, Max age: {MaximumAgeCaching} seconds")
             # Verify that it is not expired
-            if cache_max_age > 0 and cache_age_seconds > cache_max_age:
+            if MaximumAgeCaching > 0 and cacheAgeSeconds > MaximumAgeCaching:
                 cacheFile.close()
                 raise Exception("Cache expired")
         # ~~~~ END CODE INSERT ~~~~
