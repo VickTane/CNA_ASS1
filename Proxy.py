@@ -41,7 +41,7 @@ except:
 try:
     # Listen on the server socket
     # ~~~~ INSERT CODE ~~~~
-    serverSocket.listen(8)
+    serverSocket.listen(8) # 8 is blocking, will be reject when exeeded 8
     # ~~~~ END CODE INSERT ~~~~
     print('Listening to socket')
 except:
@@ -56,7 +56,7 @@ while True:
     # Accept connection from client and store in the clientSocket
     try:
         # ~~~~ INSERT CODE ~~~~
-        clientSocket, clientAddress = serverSocket.accept()
+        clientSocket, clientAddress = serverSocket.accept() #Blocking waits for the client to connect, returning a new socket, clientSocket, and the client address.
         # ~~~~ END CODE INSERT ~~~~
         print('Received a connection')
     except:
@@ -66,7 +66,7 @@ while True:
     # Get HTTP request from client
     # and store it in the variable: messageBytes
     # ~~~~ INSERT CODE ~~~~
-    messageBytes = clientSocket.recv(BUFFER_SIZE)
+    messageBytes = clientSocket.recv(BUFFER_SIZE) #Data is stored as a stream of bytes and needs to be converted to a string using .decode('utf-8').
     # ~~~~ END CODE INSERT ~~~~
     message = messageBytes.decode('utf-8')
     print('Received request:')
@@ -74,6 +74,7 @@ while True:
 
     # Extract the method, URI and version of the HTTP client request 
     requestParts = message.split()
+    ##Filter and defence structure
     if len(requestParts) < 3:
         clientSocket.close()
         continue
@@ -116,13 +117,18 @@ while True:
         # ~~~~ INSERT CODE ~~~~
         # Cache validation logic (added without modifying structure)
         fileExists = os.path.isfile(cacheLocation)
+
+        ##if for 
         if fileExists:
+            
             cacheFile = open(cacheLocation, "r")
             cacheData = cacheFile.readlines()
+
+            ##
             cache_content = ''.join(cacheData)
 
 
-            
+
             
             # Check cache expiration
             cache_control_match = re.search(
@@ -141,6 +147,9 @@ while True:
                 raise Exception("Cache expired")
         # ~~~~ END CODE INSERT ~~~~
 
+
+
+
         print('Cache hit! Loading from cache file: ' + cacheLocation)
         # ProxyServer finds a cache hit
         # Send back response to client 
@@ -157,7 +166,7 @@ while True:
         # Create a socket to connect to origin server
         # and store in originServerSocket
         # ~~~~ INSERT CODE ~~~~
-        originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        originServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) ##createing new socket
         # ~~~~ END CODE INSERT ~~~~
 
         print('Connecting to:\t\t' + hostname + '\n')
@@ -166,7 +175,7 @@ while True:
             address = socket.gethostbyname(hostname)
             # Connect to the origin server
             # ~~~~ INSERT CODE ~~~~
-            originServerSocket.connect((address, 80))
+            originServerSocket.connect((address, 80)) #connect to original 
             # ~~~~ END CODE INSERT ~~~~
             print('Connected to origin Server')
 
