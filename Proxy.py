@@ -118,30 +118,31 @@ while True:
         # Cache validation logic (added without modifying structure)
         fileExists = os.path.isfile(cacheLocation)
 
-        ##if for 
+        ##if for Check if the requested resource has been cached to the local file system
         if fileExists:
             
             cacheFile = open(cacheLocation, "r")
             cacheData = cacheFile.readlines()
 
-            ##
+            ##Merge cached data in list form
             cache_content = ''.join(cacheData)
 
 
 
             
-            # Check cache expiration
+            # Check cache expiration and take max age from http header
             cache_control_match = re.search(
                 r'Cache-Control:\s*max-age=(\d+)', 
                 cache_content, 
                 re.IGNORECASE
             )
             cache_max_age = int(cache_control_match.group(1)) if cache_control_match else 0
+            # Calculate how long the cache file has existed
             last_modified_time = os.path.getmtime(cacheLocation)
             cache_age_seconds = time.time() - last_modified_time
             
             print(f"Cache file age: {int(cache_age_seconds)} seconds, Max age: {cache_max_age} seconds")
-            
+            # Verify that it is not expired
             if cache_max_age > 0 and cache_age_seconds > cache_max_age:
                 cacheFile.close()
                 raise Exception("Cache expired")
